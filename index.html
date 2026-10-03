@@ -258,9 +258,13 @@
     players.youtube = {
       mute(m) { if (m) cmd('mute'); else { cmd('unMute'); cmd('setVolume', [100]); } },
     };
-    // YouTube przyjmuje komendy dopiero po załadowaniu – ponów stan dźwięku po starcie
+    // YouTube przyjmuje komendy dopiero po załadowaniu – ponów stan dźwięku po starcie.
+    // Trwający live z playlisty potrafi stanąć na miniaturze mimo autoplay=1, więc dodatkowo "play".
     f.addEventListener('load', () => {
-      [500, 1500, 3500].forEach(t => setTimeout(() => players.youtube.mute(state.audio !== 'youtube'), t));
+      [500, 1500, 3500, 7000].forEach(t => setTimeout(() => {
+        cmd('playVideo');
+        players.youtube.mute(state.audio !== 'youtube');
+      }, t));
     });
   }
 
