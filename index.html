@@ -104,18 +104,12 @@
   .screen { position: relative; flex: 1; min-height: 0; background: #000; border-radius: 0 0 10px 10px; overflow: hidden; }
   .screen iframe, .screen > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
-  /* Twitch nie gra w oknie mniejszym niż 400×300 – wtedy (i tylko wtedy) mówimy, co zrobić */
-  .notice {
-    position: absolute; inset: 0; z-index: 2;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    padding: 10px; text-align: center; background: var(--bg); font-size: 14px;
-  }
-  .notice[hidden], .notice [hidden] { display: none; }
-  .notice p { margin: 0; max-width: 34ch; }
-  .notice .how { color: var(--muted); }
-  .notice .btn { height: 36px; font-size: 14px; }
-  .notice.compact p { display: none; }
-  .notice.compact .btn { height: 30px; padding: 0 10px; font-size: 12px; }
+  /* Twitch nadaje, a jego odtwarzacz stoi – przycisk naprawy na pasku (nigdy na obrazie) */
+  .mini.fix { background: #fff; color: #111; }
+  .mini.fix:hover { background: #ddd; }
+  .mini[hidden] { display: none !important; }
+  .tile:has(.mini.fix:not([hidden])) .mini.grow { display: none !important; }
+  .cap { overflow: hidden; }
 
   .error {
     position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
@@ -127,9 +121,9 @@
     .btn { padding: 0 11px; }
     .btn .txt { display: none; }
     .btn.primary .txt { display: inline; }
-    .name .ext, .mini.grow .txt { display: none; }
+    .name .ext, .mini.grow .txt, .mini.fix .txt { display: none; }
   }
-  /* Telefon poziomo: cieńsze paski, żeby duży Twitch miał swoje 300 px wysokości */
+  /* Telefon poziomo: cieńsze paski, więcej miejsca na obraz */
   @media (max-height: 460px) and (orientation: landscape) {
     :root { --bar-h: 40px; --cap: 26px; }
     .btn { height: 32px; }
@@ -154,6 +148,7 @@
       <div class="cap">
         <a class="name" href="https://www.twitch.tv/lokista_" target="_blank" rel="noopener" title="Otwórz na Twitchu"><span class="dot"></span>Twitch <span class="ext">↗</span></a>
         <span class="spacer"></span>
+        <button class="mini fix" id="twitchFix" type="button" hidden>▶ Odtwórz</button>
         <button class="mini sound" type="button" data-sound="twitch" title="Dźwięk z Twitcha">🔊</button>
         <button class="mini grow" type="button" data-pick="twitch" title="Pokaż Twitch na dużym ekranie">⤢ <span class="txt">Powiększ</span></button>
       </div>
@@ -195,7 +190,6 @@
   const IDS = ['twitch', 'youtube', 'kick'];
   const NAMES = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' };
   const ALLOW = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-  const TWITCH_MIN = { w: 400, h: 300 };
 
   const store = {
     get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
@@ -219,17 +213,11 @@
   // ---------- odtwarzacze ----------
   function mountTwitch() {
     const box = $('#screen-twitch');
-    box.innerHTML = `
-      <div id="twitch-embed"></div>
-      <div class="notice" id="twitchNotice" hidden>
-        <p class="why">Twitch gra tylko w oknie co najmniej 400×300, a to jest mniejsze.</p>
-        <p class="how"></p>
-        <button class="btn primary" type="button" data-pick="twitch">⤢ Powiększ Twitch</button>
-        <a class="btn primary" href="https://www.twitch.tv/${CHANNELS.twitch}" target="_blank" rel="noopener">Otwórz w aplikacji Twitch ↗</a>
-      </div>`;
+    box.innerHTML = '<div id="twitch-embed"></div>';
+    twitch.online = false;
     if (!window.Twitch || !location.hostname) {
       box.innerHTML = '<div class="error">Twitch nie wczytał się. Sprawdź internet i naciśnij „Odśwież”.</div>';
-      players.twitch = { mute() {}, play() {} };
+      players.twitch = { mute() {}, play() {}, paused: () => false };
       return;
     }
     const p = new Twitch.Player('twitch-embed', {
@@ -241,10 +229,15 @@
     players.twitch = {
       mute(m) { try { p.setMuted(m); if (!m) p.setVolume(1); } catch {} },
       play() { try { p.play(); } catch {} },
+      // Zablokowany odtwarzacz nie zgłasza pauzy – po prostu jego czas stoi w miejscu.
+      time() { try { return p.getCurrentTime(); } catch { return 0; } },
+      paused() { try { return p.isPaused(); } catch { return false; } },
     };
-    p.addEventListener(Twitch.Player.READY, () => players.twitch.mute(state.audio !== 'twitch'));
-    twitchFitted = null;
-    checkTwitch();
+    const E = Twitch.Player;
+    p.addEventListener(E.READY, () => players.twitch.mute(state.audio !== 'twitch'));
+    p.addEventListener(E.ONLINE, () => { twitch.online = true; checkTwitch(); });
+    p.addEventListener(E.OFFLINE, () => { twitch.online = false; checkTwitch(); });
+    [E.PLAY, E.PLAYING, E.PAUSE].forEach(ev => p.addEventListener(ev, () => setTimeout(checkTwitch, 300)));
   }
 
   function mountYouTube() {
@@ -329,29 +322,25 @@
     checkTwitch();
   }
 
-  // Zasada Twitcha: odtwarzacz mniejszy niż 400×300 (albo czymś zasłonięty) nie startuje,
-  // nawet po dotknięciu play – a wtedy nie liczy się też jako widz.
-  let twitchFitted = null;
+  // Twitch sam decyduje, czy wystartuje: nie rusza, gdy coś zasłania odtwarzacz
+  // (dlatego nic na nim nie leży) albo gdy okno jest bardzo małe (np. mały kafel na telefonie).
+  // Nie zgadujemy po rozmiarze – pytamy odtwarzacz. Gdy kanał nadaje, a Twitch stoi,
+  // na pasku NAD obrazem pojawia się przycisk, który to naprawia.
+  const twitch = { online: false, lastTime: -1, still: 0 };
   function checkTwitch() {
-    const notice = $('#twitchNotice');
-    if (!notice) return;
-    const fits = el => { const r = el.getBoundingClientRect(); return r.width >= TWITCH_MIN.w - 1 && r.height >= TWITCH_MIN.h - 1; };
-    const scr = $('#screen-twitch');
-    if (!scr.getBoundingClientRect().width) return;
-    const ok = fits(scr);
-    const promoteHelps = !ok && state.layout === 'focus' && state.main !== 'twitch' && fits($(`#screen-${state.main}`));
-
-    notice.hidden = ok;
-    const r = scr.getBoundingClientRect();
-    notice.classList.toggle('compact', r.width < 300 || r.height < 170);
-    notice.querySelector('[data-pick]').hidden = !promoteHelps;
-    notice.querySelector('a').hidden = promoteHelps;
-    notice.querySelector('.how').textContent = promoteHelps ? ''
-      : innerHeight > innerWidth ? 'Obróć telefon poziomo albo:' : 'Powiększ okno albo:';
-
-    if (ok && twitchFitted === false) setTimeout(() => players.twitch?.play(), 300);
-    twitchFitted = ok;
+    const fix = $('#twitchFix');
+    const stuck = twitch.online && (twitch.still >= 2 || players.twitch?.paused());
+    const small = state.layout !== 'focus' || state.main !== 'twitch';
+    fix.hidden = !stuck;
+    fix.dataset.action = small ? 'grow' : 'play';
+    fix.innerHTML = small ? '▶ <span class="txt">Nie gra – </span>Powiększ' : '▶ Odtwórz';
   }
+  setInterval(() => {
+    const t = players.twitch?.time?.() ?? 0;
+    twitch.still = (twitch.online && t === twitch.lastTime) ? twitch.still + 1 : 0;
+    twitch.lastTime = t;
+    checkTwitch();
+  }, 3000);
 
   // ---------- układ i dźwięk ----------
   function render() {
@@ -389,6 +378,7 @@
     store.set('main', id);
     if (state.audio) state.audio = id;   // dźwięk idzie za dużym ekranem
     applyAudio();
+    if (id === 'twitch') setTimeout(() => players.twitch?.play(), 400);
   }
 
   $('#soundBtn').addEventListener('click', () => {
@@ -405,6 +395,17 @@
 
   wall.addEventListener('click', e => {
     if (e.target.closest('a')) return;
+    const fix = e.target.closest('#twitchFix');
+    if (fix) {
+      if (fix.dataset.action === 'grow') {
+        state.layout = 'focus';
+        store.set('layout', 'focus');
+        promote('twitch');
+      } else {
+        players.twitch?.play();
+      }
+      return;
+    }
     const pick = e.target.closest('[data-pick]');
     if (pick) { promote(pick.dataset.pick); return; }
     const snd = e.target.closest('[data-sound]');

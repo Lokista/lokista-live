@@ -17,14 +17,15 @@ Twitch, YouTube i Kick Lokisty naraz, na jednym ekranie: PC, telefon, tablet.
 - **Wszystkie równo**: trzy równe okna; głośnik przy nazwie wybiera, które gra z dźwiękiem.
 - Gdy kanał jest offline, YouTube pokazuje ostatnią transmisję, a Twitch i Kick planszę „offline”.
 
-## Twitch: dwie zasady, których nie da się obejść
+## Twitch: kiedy sam nie rusza
 
-Odtwarzacz Twitcha osadzony na stronie startuje (i liczy widza) tylko, gdy:
-1. ma **co najmniej 400×300 px**,
-2. **nic go nie zasłania** — dlatego nazwy i przyciski są na pasku nad obrazem, a nie na nim.
+Osadzony odtwarzacz Twitcha nie startuje (i nie liczy widza), gdy:
+1. **coś go zasłania** — dlatego nazwy i przyciski są na pasku nad obrazem, nigdy na nim,
+2. jest **bardzo mały** — w testach grał przy 370×208 (duże okno na telefonie w pionie),
+   a stał przy 182×102 (mały kafelek na telefonie).
 
-Telefon w pionie ma za mało szerokości, więc tam Twitch pokazuje: „Obróć telefon poziomo albo otwórz w aplikacji Twitch”.
-Telefon poziomo, tablet i PC: Twitch jako duże okno gra normalnie.
+Aplikacja sprawdza co 3 s, czy Twitch faktycznie gra. Gdy kanał nadaje, a odtwarzacz stoi,
+na pasku Twitcha pojawia się przycisk **▶ Powiększ** (albo **▶ Odtwórz**), który to naprawia.
 
 ## Kanały
 
