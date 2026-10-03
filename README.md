@@ -17,6 +17,15 @@ Twitch, YouTube i Kick Lokisty naraz, na jednym ekranie: PC, telefon, tablet.
 - **Wszystkie równo**: trzy równe okna; głośnik przy nazwie wybiera, które gra z dźwiękiem.
 - Gdy kanał jest offline, YouTube pokazuje ostatnią transmisję, a Twitch i Kick planszę „offline”.
 
+## Twitch: dwie zasady, których nie da się obejść
+
+Odtwarzacz Twitcha osadzony na stronie startuje (i liczy widza) tylko, gdy:
+1. ma **co najmniej 400×300 px**,
+2. **nic go nie zasłania** — dlatego nazwy i przyciski są na pasku nad obrazem, a nie na nim.
+
+Telefon w pionie ma za mało szerokości, więc tam Twitch pokazuje: „Obróć telefon poziomo albo otwórz w aplikacji Twitch”.
+Telefon poziomo, tablet i PC: Twitch jako duże okno gra normalnie.
+
 ## Kanały
 
 Ustawione w `index.html` (`CHANNELS`): Twitch `lokista_`, YouTube `@lokistaofficial`, Kick `lokista`.

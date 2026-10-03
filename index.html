@@ -24,7 +24,8 @@
     --youtube: #ff3b3b;
     --kick: #53fc18;
     --bar-h: 56px;
-    --gap: 6px;
+    --cap: 34px;   /* pasek z nazwą nad każdym odtwarzaczem (skrypt czyta tę wartość) */
+    --gap: 6px;    /* odstęp między kaflami (skrypt czyta tę wartość) */
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
@@ -48,95 +49,73 @@
     appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--text);
     font: inherit; font-weight: 600; height: 40px; padding: 0 14px; border-radius: 10px;
     cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none;
   }
   .btn:hover { border-color: #444452; }
   .btn:active { transform: translateY(1px); }
   .btn.primary { background: #fff; color: #111; border-color: #fff; }
   .btn .ico { font-size: 17px; line-height: 1; }
 
-  /* ---------- ściana z odtwarzaczami ---------- */
-  .stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 10px 10px; min-height: 0; }
-  .wall {
-    /* --ar = proporcje całego bloku, liczone tak, żeby każdy kafel był 16:9 */
-    --ar: 2.6667;
-    width: min(100%, calc((100dvh - var(--bar-h) - 10px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * var(--ar)));
-    aspect-ratio: var(--ar);
-    display: grid; gap: var(--gap);
-  }
-  /* Szeroki ekran: duży po lewej, dwa małe po prawej */
-  .wall.focus {
-    --ar: 2.6667; /* 8:3 */
-    grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr;
-    grid-template-areas: "main s1" "main s2";
-  }
-  /* Szeroki ekran: wszystkie równo (2 u góry, 1 na dole na środku) */
-  .wall.equal {
-    --ar: 1.7778; /* 16:9 */
-    grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr;
-    grid-template-areas: "e1 e1 e2 e2" ". e3 e3 .";
-  }
-  @media (orientation: portrait) {
-    .stage { align-items: flex-start; padding-top: 4px; }
-    /* Telefon / tablet pionowo: duży u góry, dwa małe obok siebie pod spodem */
-    .wall.focus {
-      --ar: 1.1852; /* 32:27 */
-      grid-template-columns: 1fr 1fr; grid-template-rows: 2fr 1fr;
-      grid-template-areas: "main main" "s1 s2";
-    }
-    /* Pionowo, wszystkie równo: jeden pod drugim */
-    .wall.equal {
-      --ar: 0.5926; /* 16:27 */
-      grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr);
-      grid-template-areas: "e1" "e2" "e3";
-    }
-  }
+  /* ---------- ściana z odtwarzaczami ----------
+     Rozmiary liczy skrypt (fit), tak żeby każdy obraz miał dokładnie 16:9
+     i całość mieściła się na ekranie razem z paskami nazw. */
+  .stage { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; padding: 0 10px 10px; }
+  .wall { display: grid; gap: var(--gap); }
+  .wall.focus.landscape { grid-template-areas: "main s1" "main s2"; }
+  .wall.focus.portrait  { grid-template-areas: "main main" "s1 s2"; }
+  .wall.equal.landscape { grid-template-areas: "e1 e1 e2 e2" ". e3 e3 ."; }
+  .wall.equal.portrait  { grid-template-areas: "e1" "e2" "e3"; }
+  .stage.portrait { align-items: flex-start; padding-top: 4px; }
 
-  .tile {
-    position: relative; min-width: 0; min-height: 0;
-    background: #000; border-radius: 10px; overflow: hidden;
-    outline: 2px solid transparent; outline-offset: -2px;
-  }
-  .tile.has-sound { outline-color: var(--c); }
+  .tile { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .tile[data-id="twitch"]  { --c: var(--twitch); }
   .tile[data-id="youtube"] { --c: var(--youtube); }
   .tile[data-id="kick"]    { --c: var(--kick); }
-  .screen, .screen iframe, .screen > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
-  .label {
-    position: absolute; left: 8px; top: 8px; z-index: 3;
-    display: flex; align-items: center; gap: 6px;
+  /* Pasek nazwy leży NAD obrazem, nigdy na nim: Twitch nie startuje,
+     gdy cokolwiek zasłania jego odtwarzacz. */
+  .cap {
+    height: var(--cap); flex: none;
+    display: flex; align-items: center; gap: 6px; padding: 0 4px 0 8px;
+    background: var(--panel); border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid transparent;
   }
-  .chip {
-    display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px;
-    border-radius: 999px; background: rgba(0,0,0,.72); color: #fff; font-size: 13px; font-weight: 700;
-    border: 0; font-family: inherit; text-decoration: none; cursor: pointer;
+  .tile.has-sound .cap { border-bottom-color: var(--c); }
+  .name {
+    display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+    color: var(--text); font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap;
   }
-  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
-  .chip.sound { padding: 0 9px; font-size: 14px; }
-  .tile.has-sound .chip.sound { background: var(--c); color: #000; }
-  .tile[data-id="twitch"].has-sound .chip.sound { color: #fff; }
+  .name .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+  .name .ext { color: var(--muted); font-weight: 400; }
+  .cap .spacer { flex: 1; }
+  .mini {
+    appearance: none; border: 0; background: transparent; color: var(--text);
+    font: 600 13px/1 system-ui, sans-serif; height: 28px; padding: 0 8px; border-radius: 8px;
+    cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .mini:hover { background: #262630; }
+  .tile.has-sound .mini.sound { background: var(--c); color: #000; }
+  .tile[data-id="twitch"].has-sound .mini.sound { color: #fff; }
+  .mini.grow { display: none; }
+  .wall.focus .tile:not(.main) .mini.grow { display: inline-flex; }
+  .wall.focus .tile:not(.main) .mini.sound { display: none; }
+  .wall.focus .tile:not(.main) .cap { cursor: pointer; }
 
-  /* Mały kafel w układzie "duży + 2 małe": dotknięcie powiększa */
-  .pick {
-    display: none; position: absolute; inset: 0; z-index: 2;
-    background: transparent; border: 0; cursor: pointer; padding: 0;
-  }
-  .pick span {
-    position: absolute; right: 8px; bottom: 8px;
-    background: rgba(0,0,0,.72); color: #fff; font: 600 12px/1 system-ui, sans-serif;
-    padding: 6px 9px; border-radius: 999px;
-  }
-  .wall.focus .tile:not(.main) .pick { display: block; }
-  .wall.focus .tile:not(.main) .label .sound { display: none; }
-  .wall.focus .tile:not(.main):hover { outline-color: rgba(255,255,255,.35); }
+  .screen { position: relative; flex: 1; min-height: 0; background: #000; border-radius: 0 0 10px 10px; overflow: hidden; }
+  .screen iframe, .screen > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
-  .hint {
-    position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-    background: #fff; color: #111; padding: 10px 16px; border-radius: 12px; font-weight: 600;
-    box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10; max-width: calc(100vw - 32px); text-align: center;
-    opacity: 0; pointer-events: none; transition: opacity .25s;
+  /* Twitch nie gra w oknie mniejszym niż 400×300 – wtedy (i tylko wtedy) mówimy, co zrobić */
+  .notice {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px; text-align: center; background: var(--bg); font-size: 14px;
   }
-  .hint.show { opacity: 1; }
+  .notice[hidden], .notice [hidden] { display: none; }
+  .notice p { margin: 0; max-width: 34ch; }
+  .notice .how { color: var(--muted); }
+  .notice .btn { height: 36px; font-size: 14px; }
+  .notice.compact p { display: none; }
+  .notice.compact .btn { height: 30px; padding: 0 10px; font-size: 12px; }
 
   .error {
     position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
@@ -148,10 +127,14 @@
     .btn { padding: 0 11px; }
     .btn .txt { display: none; }
     .btn.primary .txt { display: inline; }
+    .name .ext, .mini.grow .txt { display: none; }
   }
+  /* Telefon poziomo: cieńsze paski, żeby duży Twitch miał swoje 300 px wysokości */
   @media (max-height: 460px) and (orientation: landscape) {
-    :root { --bar-h: 46px; }
-    .btn { height: 34px; }
+    :root { --bar-h: 40px; --cap: 26px; }
+    .btn { height: 32px; }
+    .mini { height: 22px; }
+    .stage { padding-bottom: 4px; }
   }
 </style>
 </head>
@@ -159,42 +142,43 @@
 <header class="bar">
   <div class="brand"><img src="icons/icon-192.png" alt=""><span>Lokista Live</span></div>
   <div class="tools">
-    <button id="soundBtn" class="btn primary" type="button"><span class="ico">🔊</span><span class="txt">Włącz dźwięk</span></button>
+    <button id="soundBtn" class="btn primary" type="button" title="Jeśli dalej cicho, dotknij głośnika w samym odtwarzaczu"><span class="ico">🔊</span><span class="txt">Włącz dźwięk</span></button>
     <button id="layoutBtn" class="btn" type="button" title="Zmień układ"><span class="ico">▦</span><span class="txt">Wszystkie równo</span></button>
     <button id="reloadBtn" class="btn" type="button" title="Załaduj od nowa"><span class="ico">⟳</span><span class="txt">Odśwież</span></button>
   </div>
 </header>
 
-<div class="stage">
-  <main id="wall" class="wall focus">
+<div class="stage" id="stage">
+  <main id="wall" class="wall focus landscape">
     <section class="tile" data-id="twitch">
-      <div class="screen" id="screen-twitch"></div>
-      <div class="label">
-        <a class="chip" href="https://www.twitch.tv/lokista_" target="_blank" rel="noopener" title="Otwórz na Twitchu"><span class="dot"></span>Twitch ↗</a>
-        <button class="chip sound" type="button" data-sound="twitch" title="Dźwięk z Twitcha">🔊</button>
+      <div class="cap">
+        <a class="name" href="https://www.twitch.tv/lokista_" target="_blank" rel="noopener" title="Otwórz na Twitchu"><span class="dot"></span>Twitch <span class="ext">↗</span></a>
+        <span class="spacer"></span>
+        <button class="mini sound" type="button" data-sound="twitch" title="Dźwięk z Twitcha">🔊</button>
+        <button class="mini grow" type="button" data-pick="twitch" title="Pokaż Twitch na dużym ekranie">⤢ <span class="txt">Powiększ</span></button>
       </div>
-      <button class="pick" type="button" data-pick="twitch" aria-label="Pokaż Twitch na dużym ekranie"><span>Powiększ</span></button>
+      <div class="screen" id="screen-twitch"></div>
     </section>
     <section class="tile" data-id="youtube">
-      <div class="screen" id="screen-youtube"></div>
-      <div class="label">
-        <a class="chip" href="https://www.youtube.com/@lokistaofficial/live" target="_blank" rel="noopener" title="Otwórz na YouTube"><span class="dot"></span>YouTube ↗</a>
-        <button class="chip sound" type="button" data-sound="youtube" title="Dźwięk z YouTube">🔊</button>
+      <div class="cap">
+        <a class="name" href="https://www.youtube.com/@lokistaofficial/live" target="_blank" rel="noopener" title="Otwórz na YouTube"><span class="dot"></span>YouTube <span class="ext">↗</span></a>
+        <span class="spacer"></span>
+        <button class="mini sound" type="button" data-sound="youtube" title="Dźwięk z YouTube">🔊</button>
+        <button class="mini grow" type="button" data-pick="youtube" title="Pokaż YouTube na dużym ekranie">⤢ <span class="txt">Powiększ</span></button>
       </div>
-      <button class="pick" type="button" data-pick="youtube" aria-label="Pokaż YouTube na dużym ekranie"><span>Powiększ</span></button>
+      <div class="screen" id="screen-youtube"></div>
     </section>
     <section class="tile" data-id="kick">
-      <div class="screen" id="screen-kick"></div>
-      <div class="label">
-        <a class="chip" href="https://kick.com/lokista" target="_blank" rel="noopener" title="Otwórz na Kicku"><span class="dot"></span>Kick ↗</a>
-        <button class="chip sound" type="button" data-sound="kick" title="Dźwięk z Kicka">🔊</button>
+      <div class="cap">
+        <a class="name" href="https://kick.com/lokista" target="_blank" rel="noopener" title="Otwórz na Kicku"><span class="dot"></span>Kick <span class="ext">↗</span></a>
+        <span class="spacer"></span>
+        <button class="mini sound" type="button" data-sound="kick" title="Dźwięk z Kicka">🔊</button>
+        <button class="mini grow" type="button" data-pick="kick" title="Pokaż Kick na dużym ekranie">⤢ <span class="txt">Powiększ</span></button>
       </div>
-      <button class="pick" type="button" data-pick="kick" aria-label="Pokaż Kick na dużym ekranie"><span>Powiększ</span></button>
+      <div class="screen" id="screen-kick"></div>
     </section>
   </main>
 </div>
-
-<div id="hint" class="hint" role="status"></div>
 
 <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 <script>
@@ -207,8 +191,11 @@
   // Do testów można podmienić kanał w adresie, np. ?kick=xqc&youtube=UC…
   const params = new URLSearchParams(location.search);
   for (const k in CHANNELS) if (params.get(k)) CHANNELS[k] = params.get(k);
+
   const IDS = ['twitch', 'youtube', 'kick'];
+  const NAMES = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' };
   const ALLOW = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+  const TWITCH_MIN = { w: 400, h: 300 };
 
   const store = {
     get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
@@ -225,16 +212,24 @@
 
   const $ = (s, r = document) => r.querySelector(s);
   const wall = $('#wall');
+  const stage = $('#stage');
   const tiles = Object.fromEntries(IDS.map(id => [id, $(`.tile[data-id="${id}"]`)]));
   const players = {};
 
   // ---------- odtwarzacze ----------
   function mountTwitch() {
     const box = $('#screen-twitch');
-    box.innerHTML = '<div id="twitch-embed"></div>';
+    box.innerHTML = `
+      <div id="twitch-embed"></div>
+      <div class="notice" id="twitchNotice" hidden>
+        <p class="why">Twitch gra tylko w oknie co najmniej 400×300, a to jest mniejsze.</p>
+        <p class="how"></p>
+        <button class="btn primary" type="button" data-pick="twitch">⤢ Powiększ Twitch</button>
+        <a class="btn primary" href="https://www.twitch.tv/${CHANNELS.twitch}" target="_blank" rel="noopener">Otwórz w aplikacji Twitch ↗</a>
+      </div>`;
     if (!window.Twitch || !location.hostname) {
       box.innerHTML = '<div class="error">Twitch nie wczytał się. Sprawdź internet i naciśnij „Odśwież”.</div>';
-      players.twitch = { mute() {} };
+      players.twitch = { mute() {}, play() {} };
       return;
     }
     const p = new Twitch.Player('twitch-embed', {
@@ -245,8 +240,11 @@
     });
     players.twitch = {
       mute(m) { try { p.setMuted(m); if (!m) p.setVolume(1); } catch {} },
+      play() { try { p.play(); } catch {} },
     };
     p.addEventListener(Twitch.Player.READY, () => players.twitch.mute(state.audio !== 'twitch'));
+    twitchFitted = null;
+    checkTwitch();
   }
 
   function mountYouTube() {
@@ -269,7 +267,6 @@
     };
     // YouTube przyjmuje komendy dopiero po załadowaniu – ponów stan dźwięku po starcie
     f.addEventListener('load', () => {
-      cmd('addEventListener', ['onReady']);
       [500, 1500, 3500].forEach(t => setTimeout(() => players.youtube.mute(state.audio !== 'youtube'), t));
     });
   }
@@ -291,9 +288,75 @@
 
   function mountAll() { mountTwitch(); mountYouTube(); mountKick(); }
 
+  // ---------- rozmiary: każdy obraz 16:9, pasek nazwy (CAP) nad nim ----------
+  function fit() {
+    const cs = getComputedStyle(stage);
+    const W = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const H = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const portrait = innerHeight > innerWidth;
+    const root = getComputedStyle(document.documentElement);
+    const R = 9 / 16, c = parseFloat(root.getPropertyValue('--cap')), g = parseFloat(root.getPropertyValue('--gap'));
+    let cols, rows;
+
+    if (state.layout === 'focus' && !portrait) {
+      // duży (m) po lewej, dwa małe (s) jeden pod drugim: m = 2s + (c+g)/R
+      const k = (c + g) / R;
+      const s = Math.max(60, Math.min((W - k - g) / 3, ((H - c) / R - k) / 2));
+      const m = 2 * s + k;
+      const h = m * R + c;
+      cols = [m, s]; rows = [(h - g) / 2, (h - g) / 2];
+    } else if (state.layout === 'focus') {
+      // duży (m) u góry, dwa małe (s) obok siebie pod spodem
+      const m = Math.max(120, Math.min(W, (H - 2 * c - g + g * R / 2) / (R * 1.5)));
+      const s = (m - g) / 2;
+      cols = [s, s]; rows = [m * R + c, s * R + c];
+    } else if (!portrait) {
+      // dwa u góry, jeden na dole na środku, każdy szerokości t
+      const t = Math.max(100, Math.min((W - g) / 2, (H - g - 2 * c) / (2 * R)));
+      const q = (t - g) / 2;
+      cols = [q, q, q, q]; rows = [t * R + c, t * R + c];
+    } else {
+      // trzy jeden pod drugim
+      const t = Math.max(100, Math.min(W, (H - 2 * g - 3 * c) / (3 * R)));
+      cols = [t]; rows = [t * R + c, t * R + c, t * R + c];
+    }
+    const px = a => a.map(v => `${Math.floor(v)}px`).join(' ');
+    wall.style.gridTemplateColumns = px(cols);
+    wall.style.gridTemplateRows = px(rows);
+    wall.classList.toggle('portrait', portrait);
+    wall.classList.toggle('landscape', !portrait);
+    stage.classList.toggle('portrait', portrait);
+    checkTwitch();
+  }
+
+  // Zasada Twitcha: odtwarzacz mniejszy niż 400×300 (albo czymś zasłonięty) nie startuje,
+  // nawet po dotknięciu play – a wtedy nie liczy się też jako widz.
+  let twitchFitted = null;
+  function checkTwitch() {
+    const notice = $('#twitchNotice');
+    if (!notice) return;
+    const fits = el => { const r = el.getBoundingClientRect(); return r.width >= TWITCH_MIN.w - 1 && r.height >= TWITCH_MIN.h - 1; };
+    const scr = $('#screen-twitch');
+    if (!scr.getBoundingClientRect().width) return;
+    const ok = fits(scr);
+    const promoteHelps = !ok && state.layout === 'focus' && state.main !== 'twitch' && fits($(`#screen-${state.main}`));
+
+    notice.hidden = ok;
+    const r = scr.getBoundingClientRect();
+    notice.classList.toggle('compact', r.width < 300 || r.height < 170);
+    notice.querySelector('[data-pick]').hidden = !promoteHelps;
+    notice.querySelector('a').hidden = promoteHelps;
+    notice.querySelector('.how').textContent = promoteHelps ? ''
+      : innerHeight > innerWidth ? 'Obróć telefon poziomo albo:' : 'Powiększ okno albo:';
+
+    if (ok && twitchFitted === false) setTimeout(() => players.twitch?.play(), 300);
+    twitchFitted = ok;
+  }
+
   // ---------- układ i dźwięk ----------
   function render() {
-    wall.className = `wall ${state.layout}`;
+    wall.classList.toggle('focus', state.layout === 'focus');
+    wall.classList.toggle('equal', state.layout === 'equal');
     const order = state.layout === 'focus'
       ? [state.main, ...IDS.filter(i => i !== state.main)]
       : IDS;
@@ -311,6 +374,7 @@
 
     $('#layoutBtn .txt').textContent = state.layout === 'focus' ? 'Wszystkie równo' : 'Jeden duży';
     $('#layoutBtn .ico').textContent = state.layout === 'focus' ? '▦' : '◧';
+    fit();
   }
 
   function applyAudio() {
@@ -318,18 +382,13 @@
     render();
   }
 
-  let hintTimer;
-  function hint(text, ms = 3500) {
-    const h = $('#hint');
-    h.textContent = text; h.classList.add('show');
-    clearTimeout(hintTimer); hintTimer = setTimeout(() => h.classList.remove('show'), ms);
-  }
+  function setAudio(id) { state.audio = id; applyAudio(); }
 
-  const NAMES = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' };
-  function setAudio(id) {
-    state.audio = id;
+  function promote(id) {
+    state.main = id;
+    store.set('main', id);
+    if (state.audio) state.audio = id;   // dźwięk idzie za dużym ekranem
     applyAudio();
-    if (id) hint(`Dźwięk z: ${NAMES[id]}. Jeśli dalej cicho, dotknij głośnika w samym odtwarzaczu.`);
   }
 
   $('#soundBtn').addEventListener('click', () => {
@@ -342,20 +401,22 @@
     render();
   });
 
-  $('#reloadBtn').addEventListener('click', () => { mountAll(); hint('Ładuję od nowa…', 1500); });
+  $('#reloadBtn').addEventListener('click', mountAll);
 
   wall.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
     const pick = e.target.closest('[data-pick]');
-    if (pick) {
-      state.main = pick.dataset.pick;
-      store.set('main', state.main);
-      if (state.audio) state.audio = state.main;   // dźwięk idzie za dużym ekranem
-      applyAudio();
-      return;
-    }
+    if (pick) { promote(pick.dataset.pick); return; }
     const snd = e.target.closest('[data-sound]');
-    if (snd) setAudio(state.audio === snd.dataset.sound ? null : snd.dataset.sound);
+    if (snd) { setAudio(state.audio === snd.dataset.sound ? null : snd.dataset.sound); return; }
+    // cały pasek małego kafla też powiększa
+    const cap = e.target.closest('.cap');
+    const tile = cap?.closest('.tile');
+    if (tile && state.layout === 'focus' && !tile.classList.contains('main')) promote(tile.dataset.id);
   });
+
+  addEventListener('resize', fit);
+  new ResizeObserver(fit).observe(stage);
 
   // ---------- ekran nie gaśnie podczas oglądania ----------
   let lock = null;
@@ -372,7 +433,6 @@
   render();
   mountAll();
   keepAwake();
-  setTimeout(() => { if (!state.audio) hint('Wszystko leci bez dźwięku. Naciśnij „Włącz dźwięk”.', 5000); }, 2500);
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
